@@ -3,25 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Uno Game</title>
+    <title>🎮 UNO MANIA 3D 🎮</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One:wght@400&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="welcome-screen">
-        <h1>Welcome to Uno!</h1>
-        <p>Try to be the first player to get rid of all your cards. Play cards that match the current card's color or number. Special cards can change the game!</p>
-        <button class="button" id="start-game">Start Game</button>
+    <!-- Animated Background -->
+    <div class="animated-bg">
+        <div class="floating-card"></div>
+        <div class="floating-card"></div>
+        <div class="floating-card"></div>
+        <div class="floating-card"></div>
+        <div class="floating-card"></div>
     </div>
 
-    <div id="game" style="display: none;">
-        <h1>Uno Game</h1>
-        <div id="current-card" class="card"></div>
-        <h2>Your Hand</h2>
-        <div id="player-hand"></div>
-        <h2>Bot's Hand</h2>
-        <div id="bot-hand"></div>
-        <button class="button" id="draw-card">Draw Card</button>
-        <div id="message" class="message"></div>
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="screen">
+        <div class="title-container">
+            <h1 class="mega-title">
+                <span class="letter">U</span>
+                <span class="letter">N</span>
+                <span class="letter">O</span>
+                <span class="mania">MANIA</span>
+            </h1>
+            <div class="subtitle-3d">🎯 The Ultimate Card Battle! 🎯</div>
+        </div>
+        
+        <div class="welcome-content">
+            <div class="game-rules">
+                <div class="rule-item">🎴 Match colors or numbers</div>
+                <div class="rule-item">⚡ Use special cards wisely</div>
+                <div class="rule-item">🏆 First to empty hand wins!</div>
+            </div>
+            
+            <button class="mega-button" id="start-game">
+                <span class="button-text">START EPIC GAME</span>
+                <div class="button-sparkles">✨</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game" class="screen" style="display: none;">
+        <!-- Game Header -->
+        <div class="game-header">
+            <h1 class="game-title">
+                <span class="uno-text">UNO</span>
+                <span class="mania-text">MANIA</span>
+            </h1>
+            <div class="game-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Deck</span>
+                    <span class="stat-value" id="deck-count">108</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Turn</span>
+                    <span class="stat-value" id="current-turn">You</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Card Area -->
+        <div class="current-card-area">
+            <div class="current-card-label">CURRENT CARD</div>
+            <div id="current-card" class="current-card-container">
+                <div class="card-glow"></div>
+            </div>
+            <div id="wild-color-indicator" class="wild-color-indicator" style="display: none;">
+                <span>Color: <span id="selected-color"></span></span>
+            </div>
+        </div>
+
+        <!-- Bot Hand -->
+        <div class="hand-section bot-section">
+            <h2 class="hand-title bot-title">
+                <span class="robot-icon">🤖</span>
+                BOT HAND
+                <span class="card-count" id="bot-card-count">7</span>
+            </h2>
+            <div id="bot-hand" class="hand-container bot-hand"></div>
+        </div>
+
+        <!-- Player Hand -->
+        <div class="hand-section player-section">
+            <h2 class="hand-title player-title">
+                <span class="player-icon">👤</span>
+                YOUR HAND
+                <span class="card-count" id="player-card-count">7</span>
+            </h2>
+            <div id="player-hand" class="hand-container player-hand"></div>
+        </div>
+
+        <!-- Game Controls -->
+        <div class="game-controls">
+            <button class="action-button draw-button" id="draw-card">
+                <span class="button-icon">🎴</span>
+                <span class="button-text">DRAW CARD</span>
+            </button>
+            <button class="action-button uno-button" id="call-uno" style="display: none;">
+                <span class="button-icon">🔥</span>
+                <span class="button-text">UNO!</span>
+            </button>
+        </div>
+
+        <!-- Wild Color Selector -->
+        <div id="wild-color-selector" class="wild-color-selector" style="display: none;">
+            <div class="selector-title">Choose a Color!</div>
+            <div class="color-options">
+                <button class="color-option red" data-color="Red">RED</button>
+                <button class="color-option green" data-color="Green">GREEN</button>
+                <button class="color-option blue" data-color="Blue">BLUE</button>
+                <button class="color-option yellow" data-color="Yellow">YELLOW</button>
+            </div>
+        </div>
+
+        <!-- Game Messages -->
+        <div id="message" class="message-container"></div>
+
+        <!-- Particle Effects Container -->
+        <div id="particles-container"></div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="screen" style="display: none;">
+        <div class="game-over-content">
+            <div id="game-over-title" class="game-over-title"></div>
+            <div id="game-over-message" class="game-over-message"></div>
+            <button class="mega-button" id="play-again">
+                <span class="button-text">PLAY AGAIN</span>
+                <div class="button-sparkles">🎮</div>
+            </button>
+        </div>
     </div>
 
     <script src="script.js"></script>
