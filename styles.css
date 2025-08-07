@@ -6,6 +6,10 @@
     box-sizing: border-box;
 }
 
+h2 {
+    color: #fff
+}
+
 body {
     font-family: 'Nunito', sans-serif;
     background: #000000;
@@ -805,3 +809,4 @@ body {
         padding: 10px;
     }
 }
+
