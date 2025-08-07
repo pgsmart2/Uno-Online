@@ -46,4 +46,510 @@ class UnoGame {
         for (let i = 0; i < 4; i++) {
             this.deck.push({ color: 'Wild', value: 'Wild', type: 'wild' });
             this.deck.push({ color: 'Wild', value: 'Wild_Draw_4', type: 'wild' });
-        }\n        \n        this.shuffleDeck();\n    }\n\n    shuffleDeck() {\n        for (let i = this.deck.length - 1; i > 0; i--) {\n            const j = Math.floor(Math.random() * (i + 1));\n            [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];\n        }\n    }\n\n    dealCards() {\n        // Deal 7 cards to each player\n        for (let i = 0; i < 7; i++) {\n            this.playerHand.push(this.deck.pop());\n            this.botHand.push(this.deck.pop());\n        }\n        \n        // Set starting card (cannot be wild or action card)\n        do {\n            this.currentCard = this.deck.pop();\n        } while (this.currentCard.type === 'wild' || this.currentCard.type === 'action');\n        \n        this.updateUI();\n    }\n\n    getCardImagePath(card) {\n        if (card.value === 'Wild' || card.value === 'Wild_Draw_4') {\n            return `cardImages/${card.value}.jpg`;\n        }\n        if (card.value === 'Draw_2') {\n            return `cardImages/${card.color}_Draw_2.jpg`;\n        }\n        return `cardImages/${card.color}_${card.value}.jpg`;\n    }\n\n    updateUI() {\n        this.updateCurrentCard();\n        this.updatePlayerHand();\n        this.updateBotHand();\n        this.updateGameStats();\n        this.updateUnoButton();\n    }\n\n    updateCurrentCard() {\n        const currentCardContainer = document.getElementById('current-card');\n        const cardImage = `<img src=\"${this.getCardImagePath(this.currentCard)}\" \n            alt=\"${this.currentCard.color} ${this.currentCard.value}\" \n            class=\"card-image current-card\">`;\n        \n        currentCardContainer.innerHTML = cardImage;\n        \n        // Show wild color indicator if needed\n        const wildIndicator = document.getElementById('wild-color-indicator');\n        const selectedColorSpan = document.getElementById('selected-color');\n        \n        if (this.currentCard.type === 'wild' && this.selectedColor) {\n            wildIndicator.style.display = 'block';\n            selectedColorSpan.textContent = this.selectedColor;\n            selectedColorSpan.style.color = this.getColorHex(this.selectedColor);\n        } else {\n            wildIndicator.style.display = 'none';\n        }\n    }\n\n    updatePlayerHand() {\n        const playerHandContainer = document.getElementById('player-hand');\n        playerHandContainer.innerHTML = this.playerHand.map((card, index) => {\n            const isPlayable = this.isCardPlayable(card);\n            const playableClass = isPlayable ? 'playable' : '';\n            \n            return `<img src=\"${this.getCardImagePath(card)}\" \n                alt=\"${card.color} ${card.value}\" \n                class=\"card-image ${playableClass}\" \n                onclick=\"game.selectCard(${index})\" \n                style=\"--i: ${index}\">`;\n        }).join('');\n    }\n\n    updateBotHand() {\n        const botHandContainer = document.getElementById('bot-hand');\n        botHandContainer.innerHTML = this.botHand.map((_, index) => \n            `<img src=\"cardImages/back.jpg\" \n            alt=\"Bot card\" \n            class=\"card-image\" \n            style=\"--i: ${index}\">`\n        ).join('');\n    }\n\n    updateGameStats() {\n        document.getElementById('deck-count').textContent = this.deck.length;\n        document.getElementById('current-turn').textContent = \n            this.currentPlayer === 'player' ? 'You' : 'Bot';\n        document.getElementById('player-card-count').textContent = this.playerHand.length;\n        document.getElementById('bot-card-count').textContent = this.botHand.length;\n    }\n\n    updateUnoButton() {\n        const unoButton = document.getElementById('call-uno');\n        if (this.playerHand.length === 2 && !this.playerCalledUno) {\n            unoButton.style.display = 'block';\n        } else {\n            unoButton.style.display = 'none';\n        }\n    }\n\n    isCardPlayable(card) {\n        if (this.mustDraw && this.currentPlayer === 'player') {\n            // If player must draw, only draw cards are playable\n            return card.value === 'Draw_2' || card.value === 'Wild_Draw_4';\n        }\n        \n        const currentColor = this.selectedColor || this.currentCard.color;\n        \n        return (\n            card.color === currentColor ||\n            card.value === this.currentCard.value ||\n            card.type === 'wild' ||\n            (this.currentCard.type === 'wild' && card.color === this.selectedColor)\n        );\n    }\n\n    selectCard(cardIndex) {\n        if (!this.gameActive || this.currentPlayer !== 'player') return;\n        \n        const card = this.playerHand[cardIndex];\n        \n        if (!this.isCardPlayable(card)) {\n            this.showMessage('You cannot play that card!', 'error');\n            this.shakeCard(cardIndex);\n            return;\n        }\n        \n        this.playCard(card, cardIndex, 'player');\n    }\n\n    playCard(card, cardIndex, player) {\n        // Remove card from hand\n        if (player === 'player') {\n            this.playerHand.splice(cardIndex, 1);\n            this.createParticleEffect('play');\n        } else {\n            this.botHand.splice(cardIndex, 1);\n        }\n        \n        // Handle wild cards\n        if (card.type === 'wild') {\n            if (player === 'player') {\n                this.showWildColorSelector();\n                this.pendingWildCard = card;\n                return;\n            } else {\n                // Bot chooses random color\n                this.selectedColor = this.colors[Math.floor(Math.random() * this.colors.length)];\n            }\n        } else {\n            this.selectedColor = null;\n        }\n        \n        this.currentCard = { ...card };\n        if (this.selectedColor) {\n            this.currentCard.color = this.selectedColor;\n        }\n        \n        // Handle special card effects\n        this.handleSpecialCard(card);\n        \n        this.updateUI();\n        this.checkWinCondition();\n        \n        if (this.gameActive) {\n            this.nextTurn();\n        }\n    }\n\n    handleSpecialCard(card) {\n        switch (card.value) {\n            case 'Skip':\n                this.showMessage(`${this.currentPlayer === 'player' ? 'You' : 'Bot'} played Skip!`, 'warning');\n                this.nextTurn(); // Skip the next player\n                break;\n                \n            case 'Reverse':\n                this.gameDirection *= -1;\n                this.showMessage(`${this.currentPlayer === 'player' ? 'You' : 'Bot'} played Reverse!`, 'warning');\n                break;\n                \n            case 'Draw_2':\n                this.drawCount += 2;\n                this.mustDraw = true;\n                this.showMessage(`${this.currentPlayer === 'player' ? 'You' : 'Bot'} played Draw 2!`, 'warning');\n                break;\n                \n            case 'Wild_Draw_4':\n                this.drawCount += 4;\n                this.mustDraw = true;\n                this.showMessage(`${this.currentPlayer === 'player' ? 'You' : 'Bot'} played Wild Draw 4!`, 'warning');\n                break;\n                \n            case 'Wild':\n                this.showMessage(`${this.currentPlayer === 'player' ? 'You' : 'Bot'} played Wild!`, 'success');\n                break;\n        }\n    }\n\n    nextTurn() {\n        // Handle draw card effects\n        if (this.mustDraw) {\n            const nextPlayer = this.currentPlayer === 'player' ? 'bot' : 'player';\n            \n            if (nextPlayer === 'player') {\n                // Player must draw\n                for (let i = 0; i < this.drawCount; i++) {\n                    if (this.deck.length > 0) {\n                        this.playerHand.push(this.deck.pop());\n                    }\n                }\n                this.showMessage(`You drew ${this.drawCount} cards!`, 'error');\n            } else {\n                // Bot must draw\n                for (let i = 0; i < this.drawCount; i++) {\n                    if (this.deck.length > 0) {\n                        this.botHand.push(this.deck.pop());\n                    }\n                }\n                this.showMessage(`Bot drew ${this.drawCount} cards!`, 'success');\n            }\n            \n            this.drawCount = 0;\n            this.mustDraw = false;\n            this.currentPlayer = nextPlayer;\n        } else {\n            // Normal turn change\n            this.currentPlayer = this.currentPlayer === 'player' ? 'bot' : 'player';\n        }\n        \n        this.updateUI();\n        \n        // Check for UNO penalty\n        this.checkUnoCall();\n        \n        if (this.currentPlayer === 'bot' && this.gameActive) {\n            setTimeout(() => this.botTurn(), 1500);\n        }\n    }\n\n    botTurn() {\n        if (!this.gameActive || this.currentPlayer !== 'bot') return;\n        \n        // Bot calls UNO if needed\n        if (this.botHand.length === 2) {\n            this.botCalledUno = true;\n            this.showMessage('Bot called UNO!', 'warning');\n        }\n        \n        const playableCards = this.botHand.filter((card, index) => {\n            return this.isCardPlayable(card);\n        });\n        \n        if (playableCards.length > 0) {\n            // Bot strategy: prefer action cards, then matching color, then matching number\n            let cardToPlay = this.chooseBestBotCard(playableCards);\n            let cardIndex = this.botHand.findIndex(card => \n                card.color === cardToPlay.color && card.value === cardToPlay.value\n            );\n            \n            this.playCard(cardToPlay, cardIndex, 'bot');\n        } else {\n            // Bot must draw\n            if (this.deck.length > 0) {\n                this.botHand.push(this.deck.pop());\n                this.showMessage('Bot drew a card', 'warning');\n                this.updateUI();\n                this.nextTurn();\n            }\n        }\n    }\n\n    chooseBestBotCard(playableCards) {\n        // Prioritize action cards\n        const actionCards = playableCards.filter(card => card.type === 'action');\n        if (actionCards.length > 0) {\n            return actionCards[0];\n        }\n        \n        // Then wild cards if hand is large\n        if (this.botHand.length > 3) {\n            const wildCards = playableCards.filter(card => card.type === 'wild');\n            if (wildCards.length > 0) {\n                return wildCards[0];\n            }\n        }\n        \n        // Then matching color\n        const colorMatches = playableCards.filter(card => \n            card.color === (this.selectedColor || this.currentCard.color)\n        );\n        if (colorMatches.length > 0) {\n            return colorMatches[0];\n        }\n        \n        // Finally any playable card\n        return playableCards[0];\n    }\n\n    drawCard() {\n        if (!this.gameActive || this.currentPlayer !== 'player') return;\n        \n        if (this.deck.length === 0) {\n            this.showMessage('No more cards in deck!', 'error');\n            return;\n        }\n        \n        this.playerHand.push(this.deck.pop());\n        this.createParticleEffect('draw');\n        this.updateUI();\n        \n        // Check if drawn card is playable\n        const drawnCard = this.playerHand[this.playerHand.length - 1];\n        if (this.isCardPlayable(drawnCard)) {\n            this.showMessage('You can play the card you just drew!', 'success');\n        } else {\n            this.showMessage('Card drawn - turn passes to bot', 'warning');\n            this.nextTurn();\n        }\n    }\n\n    callUno() {\n        if (this.playerHand.length === 2) {\n            this.playerCalledUno = true;\n            this.showMessage('UNO! You have one card left!', 'success');\n            this.createParticleEffect('uno');\n            document.getElementById('call-uno').style.display = 'none';\n        }\n    }\n\n    checkUnoCall() {\n        // Check if player forgot to call UNO\n        if (this.playerHand.length === 1 && !this.playerCalledUno) {\n            // Penalty: draw 2 cards\n            for (let i = 0; i < 2; i++) {\n                if (this.deck.length > 0) {\n                    this.playerHand.push(this.deck.pop());\n                }\n            }\n            this.showMessage('UNO penalty! You forgot to call UNO and drew 2 cards!', 'error');\n        }\n        \n        // Check if bot forgot to call UNO\n        if (this.botHand.length === 1 && !this.botCalledUno) {\n            for (let i = 0; i < 2; i++) {\n                if (this.deck.length > 0) {\n                    this.botHand.push(this.deck.pop());\n                }\n            }\n            this.showMessage('Bot penalty! Bot forgot to call UNO!', 'success');\n        }\n    }\n\n    checkWinCondition() {\n        if (this.playerHand.length === 0) {\n            this.endGame('player');\n        } else if (this.botHand.length === 0) {\n            this.endGame('bot');\n        }\n    }\n\n    endGame(winner) {\n        this.gameActive = false;\n        \n        const gameOverScreen = document.getElementById('game-over-screen');\n        const gameOverTitle = document.getElementById('game-over-title');\n        const gameOverMessage = document.getElementById('game-over-message');\n        \n        if (winner === 'player') {\n            gameOverTitle.textContent = '🎉 YOU WIN! 🎉';\n            gameOverTitle.className = 'game-over-title win';\n            gameOverMessage.textContent = 'Congratulations! You defeated the bot!';\n            this.createParticleEffect('win');\n        } else {\n            gameOverTitle.textContent = '😔 YOU LOSE 😔';\n            gameOverTitle.className = 'game-over-title lose';\n            gameOverMessage.textContent = 'Better luck next time! The bot won this round.';\n        }\n        \n        document.getElementById('game').style.display = 'none';\n        gameOverScreen.style.display = 'flex';\n    }\n\n    showWildColorSelector() {\n        const selector = document.getElementById('wild-color-selector');\n        selector.style.display = 'block';\n    }\n\n    selectWildColor(color) {\n        this.selectedColor = color;\n        document.getElementById('wild-color-selector').style.display = 'none';\n        \n        if (this.pendingWildCard) {\n            this.currentCard = { ...this.pendingWildCard };\n            this.currentCard.color = color;\n            \n            this.handleSpecialCard(this.pendingWildCard);\n            this.pendingWildCard = null;\n            \n            this.updateUI();\n            this.checkWinCondition();\n            \n            if (this.gameActive) {\n                this.nextTurn();\n            }\n        }\n    }\n\n    getColorHex(color) {\n        const colorMap = {\n            'Red': '#ff4757',\n            'Green': '#2ed573',\n            'Blue': '#3742fa',\n            'Yellow': '#ffa502'\n        };\n        return colorMap[color] || '#ffffff';\n    }\n\n    showMessage(text, type = 'info') {\n        const messageContainer = document.getElementById('message');\n        messageContainer.textContent = text;\n        messageContainer.className = `message-container ${type}`;\n        \n        // Auto-hide message after 3 seconds\n        setTimeout(() => {\n            messageContainer.textContent = '';\n            messageContainer.className = 'message-container';\n        }, 3000);\n    }\n\n    createParticleEffect(type) {\n        const container = document.getElementById('particles-container');\n        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#ffd700'];\n        \n        const particleCount = type === 'win' ? 50 : type === 'uno' ? 30 : 15;\n        \n        for (let i = 0; i < particleCount; i++) {\n            const particle = document.createElement('div');\n            particle.className = 'particle';\n            particle.style.left = Math.random() * 100 + '%';\n            particle.style.top = Math.random() * 100 + '%';\n            particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];\n            particle.style.animationDelay = Math.random() * 0.5 + 's';\n            \n            container.appendChild(particle);\n            \n            setTimeout(() => {\n                particle.remove();\n            }, 2000);\n        }\n    }\n\n    shakeCard(cardIndex) {\n        const playerHand = document.getElementById('player-hand');\n        const cards = playerHand.children;\n        if (cards[cardIndex]) {\n            cards[cardIndex].style.animation = 'shake 0.5s ease-in-out';\n            setTimeout(() => {\n                cards[cardIndex].style.animation = '';\n            }, 500);\n        }\n    }\n\n    startGame() {\n        this.gameActive = true;\n        this.currentPlayer = 'player';\n        this.gameDirection = 1;\n        this.drawCount = 0;\n        this.mustDraw = false;\n        this.selectedColor = null;\n        this.playerCalledUno = false;\n        this.botCalledUno = false;\n        \n        this.createDeck();\n        this.dealCards();\n        \n        document.getElementById('welcome-screen').style.display = 'none';\n        document.getElementById('game-over-screen').style.display = 'none';\n        document.getElementById('game').style.display = 'flex';\n        \n        this.showMessage('Game started! Your turn!', 'success');\n    }\n\n    initializeEventListeners() {\n        document.getElementById('start-game').addEventListener('click', () => this.startGame());\n        document.getElementById('draw-card').addEventListener('click', () => this.drawCard());\n        document.getElementById('call-uno').addEventListener('click', () => this.callUno());\n        document.getElementById('play-again').addEventListener('click', () => this.startGame());\n        \n        // Wild color selector\n        document.querySelectorAll('.color-option').forEach(button => {\n            button.addEventListener('click', (e) => {\n                this.selectWildColor(e.target.dataset.color);\n            });\n        });\n    }\n}\n\n// Add shake animation to CSS dynamically\nconst style = document.createElement('style');\nstyle.textContent = `\n    @keyframes shake {\n        0%, 100% { transform: translateX(0); }\n        25% { transform: translateX(-5px); }\n        75% { transform: translateX(5px); }\n    }\n`;\ndocument.head.appendChild(style);\n\n// Initialize the game\nconst game = new UnoGame();
+        }
+        
+        this.shuffleDeck();
+    }
+
+    shuffleDeck() {
+        for (let i = this.deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+        }
+    }
+
+    dealCards() {
+        // Deal 7 cards to each player
+        for (let i = 0; i < 7; i++) {
+            this.playerHand.push(this.deck.pop());
+            this.botHand.push(this.deck.pop());
+        }
+        
+        // Set starting card (cannot be wild or action card)
+        do {
+            this.currentCard = this.deck.pop();
+        } while (this.currentCard.type === 'wild' || this.currentCard.type === 'action');
+        
+        this.updateUI();
+    }
+
+    getCardImagePath(card) {
+        if (card.value === 'Wild' || card.value === 'Wild_Draw_4') {
+            return `cardImages/${card.value}.jpg`;
+        }
+        if (card.value === 'Draw_2') {
+            return `cardImages/${card.color}_Draw_2.jpg`;
+        }
+        return `cardImages/${card.color}_${card.value}.jpg`;
+    }
+
+    updateUI() {
+        this.updateCurrentCard();
+        this.updatePlayerHand();
+        this.updateBotHand();
+        this.updateGameStats();
+        this.updateUnoButton();
+    }
+
+    updateCurrentCard() {
+        const currentCardContainer = document.getElementById('current-card');
+        const cardImage = `<img src="${this.getCardImagePath(this.currentCard)}" 
+            alt="${this.currentCard.color} ${this.currentCard.value}" 
+            class="card-image current-card">`;
+        
+        currentCardContainer.innerHTML = cardImage;
+        
+        // Show wild color indicator if needed
+        const wildIndicator = document.getElementById('wild-color-indicator');
+        const selectedColorSpan = document.getElementById('selected-color');
+        
+        if (this.currentCard.type === 'wild' && this.selectedColor) {
+            wildIndicator.style.display = 'block';
+            selectedColorSpan.textContent = this.selectedColor;
+            selectedColorSpan.style.color = this.getColorHex(this.selectedColor);
+        } else {
+            wildIndicator.style.display = 'none';
+        }
+    }
+
+    updatePlayerHand() {
+        const playerHandContainer = document.getElementById('player-hand');
+        playerHandContainer.innerHTML = this.playerHand.map((card, index) => {
+            const isPlayable = this.isCardPlayable(card);
+            const playableClass = isPlayable ? 'playable' : '';
+            
+            return `<img src="${this.getCardImagePath(card)}" 
+                alt="${card.color} ${card.value}" 
+                class="card-image ${playableClass}" 
+                onclick="game.selectCard(${index})" 
+                style="--i: ${index}">`;
+        }).join('');
+    }
+
+    updateBotHand() {
+        const botHandContainer = document.getElementById('bot-hand');
+        botHandContainer.innerHTML = this.botHand.map((_, index) => 
+            `<img src="cardImages/back.jpg" 
+            alt="Bot card" 
+            class="card-image" 
+            style="--i: ${index}">`
+        ).join('');
+    }
+
+    updateGameStats() {
+        document.getElementById('deck-count').textContent = this.deck.length;
+        document.getElementById('current-turn').textContent = 
+            this.currentPlayer === 'player' ? 'You' : 'Bot';
+        document.getElementById('player-card-count').textContent = this.playerHand.length;
+        document.getElementById('bot-card-count').textContent = this.botHand.length;
+    }
+
+    updateUnoButton() {
+        const unoButton = document.getElementById('call-uno');
+        if (this.playerHand.length === 2 && !this.playerCalledUno) {
+            unoButton.style.display = 'block';
+        } else {
+            unoButton.style.display = 'none';
+        }
+    }
+
+    isCardPlayable(card) {
+        if (this.mustDraw && this.currentPlayer === 'player') {
+            // If player must draw, only draw cards are playable
+            return card.value === 'Draw_2' || card.value === 'Wild_Draw_4';
+        }
+        
+        const currentColor = this.selectedColor || this.currentCard.color;
+        
+        return (
+            card.color === currentColor ||
+            card.value === this.currentCard.value ||
+            card.type === 'wild' ||
+            (this.currentCard.type === 'wild' && card.color === this.selectedColor)
+        );
+    }
+
+    selectCard(cardIndex) {
+        if (!this.gameActive || this.currentPlayer !== 'player') return;
+        
+        const card = this.playerHand[cardIndex];
+        
+        if (!this.isCardPlayable(card)) {
+            this.showMessage('You cannot play that card!', 'error');
+            this.shakeCard(cardIndex);
+            return;
+        }
+        
+        this.playCard(card, cardIndex, 'player');
+    }
+
+    playCard(card, cardIndex, player) {
+        // Remove card from hand
+        if (player === 'player') {
+            this.playerHand.splice(cardIndex, 1);
+            this.createParticleEffect('play');
+        } else {
+            this.botHand.splice(cardIndex, 1);
+        }
+        
+        // Handle wild cards
+        if (card.type === 'wild') {
+            if (player === 'player') {
+                this.showWildColorSelector();
+                this.pendingWildCard = card;
+                return;
+            } else {
+                // Bot chooses random color
+                this.selectedColor = this.colors[Math.floor(Math.random() * this.colors.length)];
+            }
+        } else {
+            this.selectedColor = null;
+        }
+        
+        this.currentCard = { ...card };
+        if (this.selectedColor) {
+            this.currentCard.color = this.selectedColor;
+        }
+        
+        // Handle special card effects
+        this.handleSpecialCard(card);
+        
+        this.updateUI();
+        this.checkWinCondition();
+        
+        if (this.gameActive) {
+            this.nextTurn();
+        }
+    }
+
+    handleSpecialCard(card) {
+        switch (card.value) {
+            case 'Skip':
+                this.showMessage(`${this.currentPlayer === 'player' ? 'You' : 'Bot'} played Skip!`, 'warning');
+                this.nextTurn(); // Skip the next player
+                break;
+                
+            case 'Reverse':
+                this.gameDirection *= -1;
+                this.showMessage(`${this.currentPlayer === 'player' ? 'You' : 'Bot'} played Reverse!`, 'warning');
+                break;
+                
+            case 'Draw_2':
+                this.drawCount += 2;
+                this.mustDraw = true;
+                this.showMessage(`${this.currentPlayer === 'player' ? 'You' : 'Bot'} played Draw 2!`, 'warning');
+                break;
+                
+            case 'Wild_Draw_4':
+                this.drawCount += 4;
+                this.mustDraw = true;
+                this.showMessage(`${this.currentPlayer === 'player' ? 'You' : 'Bot'} played Wild Draw 4!`, 'warning');
+                break;
+                
+            case 'Wild':
+                this.showMessage(`${this.currentPlayer === 'player' ? 'You' : 'Bot'} played Wild!`, 'success');
+                break;
+        }
+    }
+
+    nextTurn() {
+        // Handle draw card effects
+        if (this.mustDraw) {
+            const nextPlayer = this.currentPlayer === 'player' ? 'bot' : 'player';
+            
+            if (nextPlayer === 'player') {
+                // Player must draw
+                for (let i = 0; i < this.drawCount; i++) {
+                    if (this.deck.length > 0) {
+                        this.playerHand.push(this.deck.pop());
+                    }
+                }
+                this.showMessage(`You drew ${this.drawCount} cards!`, 'error');
+            } else {
+                // Bot must draw
+                for (let i = 0; i < this.drawCount; i++) {
+                    if (this.deck.length > 0) {
+                        this.botHand.push(this.deck.pop());
+                    }
+                }
+                this.showMessage(`Bot drew ${this.drawCount} cards!`, 'success');
+            }
+            
+            this.drawCount = 0;
+            this.mustDraw = false;
+            this.currentPlayer = nextPlayer;
+        } else {
+            // Normal turn change
+            this.currentPlayer = this.currentPlayer === 'player' ? 'bot' : 'player';
+        }
+        
+        this.updateUI();
+        
+        // Check for UNO penalty
+        this.checkUnoCall();
+        
+        if (this.currentPlayer === 'bot' && this.gameActive) {
+            setTimeout(() => this.botTurn(), 1500);
+        }
+    }
+
+    botTurn() {
+        if (!this.gameActive || this.currentPlayer !== 'bot') return;
+        
+        // Bot calls UNO if needed
+        if (this.botHand.length === 2) {
+            this.botCalledUno = true;
+            this.showMessage('Bot called UNO!', 'warning');
+        }
+        
+        const playableCards = this.botHand.filter((card, index) => {
+            return this.isCardPlayable(card);
+        });
+        
+        if (playableCards.length > 0) {
+            // Bot strategy: prefer action cards, then matching color, then matching number
+            let cardToPlay = this.chooseBestBotCard(playableCards);
+            let cardIndex = this.botHand.findIndex(card => 
+                card.color === cardToPlay.color && card.value === cardToPlay.value
+            );
+            
+            this.playCard(cardToPlay, cardIndex, 'bot');
+        } else {
+            // Bot must draw
+            if (this.deck.length > 0) {
+                this.botHand.push(this.deck.pop());
+                this.showMessage('Bot drew a card', 'warning');
+                this.updateUI();
+                this.nextTurn();
+            }
+        }
+    }
+
+    chooseBestBotCard(playableCards) {
+        // Prioritize action cards
+        const actionCards = playableCards.filter(card => card.type === 'action');
+        if (actionCards.length > 0) {
+            return actionCards[0];
+        }
+        
+        // Then wild cards if hand is large
+        if (this.botHand.length > 3) {
+            const wildCards = playableCards.filter(card => card.type === 'wild');
+            if (wildCards.length > 0) {
+                return wildCards[0];
+            }
+        }
+        
+        // Then matching color
+        const colorMatches = playableCards.filter(card => 
+            card.color === (this.selectedColor || this.currentCard.color)
+        );
+        if (colorMatches.length > 0) {
+            return colorMatches[0];
+        }
+        
+        // Finally any playable card
+        return playableCards[0];
+    }
+
+    drawCard() {
+        if (!this.gameActive || this.currentPlayer !== 'player') return;
+        
+        if (this.deck.length === 0) {
+            this.showMessage('No more cards in deck!', 'error');
+            return;
+        }
+        
+        this.playerHand.push(this.deck.pop());
+        this.createParticleEffect('draw');
+        this.updateUI();
+        
+        // Check if drawn card is playable
+        const drawnCard = this.playerHand[this.playerHand.length - 1];
+        if (this.isCardPlayable(drawnCard)) {
+            this.showMessage('You can play the card you just drew!', 'success');
+        } else {
+            this.showMessage('Card drawn - turn passes to bot', 'warning');
+            this.nextTurn();
+        }
+    }
+
+    callUno() {
+        if (this.playerHand.length === 2) {
+            this.playerCalledUno = true;
+            this.showMessage('UNO! You have one card left!', 'success');
+            this.createParticleEffect('uno');
+            document.getElementById('call-uno').style.display = 'none';
+        }
+    }
+
+    checkUnoCall() {
+        // Check if player forgot to call UNO
+        if (this.playerHand.length === 1 && !this.playerCalledUno) {
+            // Penalty: draw 2 cards
+            for (let i = 0; i < 2; i++) {
+                if (this.deck.length > 0) {
+                    this.playerHand.push(this.deck.pop());
+                }
+            }
+            this.showMessage('UNO penalty! You forgot to call UNO and drew 2 cards!', 'error');
+        }
+        
+        // Check if bot forgot to call UNO
+        if (this.botHand.length === 1 && !this.botCalledUno) {
+            for (let i = 0; i < 2; i++) {
+                if (this.deck.length > 0) {
+                    this.botHand.push(this.deck.pop());
+                }
+            }
+            this.showMessage('Bot penalty! Bot forgot to call UNO!', 'success');
+        }
+    }
+
+    checkWinCondition() {
+        if (this.playerHand.length === 0) {
+            this.endGame('player');
+        } else if (this.botHand.length === 0) {
+            this.endGame('bot');
+        }
+    }
+
+    endGame(winner) {
+        this.gameActive = false;
+        
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const gameOverTitle = document.getElementById('game-over-title');
+        const gameOverMessage = document.getElementById('game-over-message');
+        
+        if (winner === 'player') {
+            gameOverTitle.textContent = '🎉 YOU WIN! 🎉';
+            gameOverTitle.className = 'game-over-title win';
+            gameOverMessage.textContent = 'Congratulations! You defeated the bot!';
+            this.createParticleEffect('win');
+        } else {
+            gameOverTitle.textContent = '😔 YOU LOSE 😔';
+            gameOverTitle.className = 'game-over-title lose';
+            gameOverMessage.textContent = 'Better luck next time! The bot won this round.';
+        }
+        
+        document.getElementById('game').style.display = 'none';
+        gameOverScreen.style.display = 'flex';
+    }
+
+    showWildColorSelector() {
+        const selector = document.getElementById('wild-color-selector');
+        selector.style.display = 'block';
+    }
+
+    selectWildColor(color) {
+        this.selectedColor = color;
+        document.getElementById('wild-color-selector').style.display = 'none';
+        
+        if (this.pendingWildCard) {
+            this.currentCard = { ...this.pendingWildCard };
+            this.currentCard.color = color;
+            
+            this.handleSpecialCard(this.pendingWildCard);
+            this.pendingWildCard = null;
+            
+            this.updateUI();
+            this.checkWinCondition();
+            
+            if (this.gameActive) {
+                this.nextTurn();
+            }
+        }
+    }
+
+    getColorHex(color) {
+        const colorMap = {
+            'Red': '#FF0000',
+            'Green': '#00FF00',
+            'Blue': '#0000FF',
+            'Yellow': '#FFFF00'
+        };
+        return colorMap[color] || '#ffffff';
+    }
+
+    showMessage(text, type = 'info') {
+        const messageContainer = document.getElementById('message');
+        messageContainer.textContent = text;
+        messageContainer.className = `message-container ${type}`;
+        
+        // Auto-hide message after 3 seconds
+        setTimeout(() => {
+            messageContainer.textContent = '';
+            messageContainer.className = 'message-container';
+        }, 3000);
+    }
+
+    createParticleEffect(type) {
+        const container = document.getElementById('particles-container');
+        const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#ffffff'];
+        
+        const particleCount = type === 'win' ? 50 : type === 'uno' ? 30 : 15;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            particle.style.animationDelay = Math.random() * 0.5 + 's';
+            
+            container.appendChild(particle);
+            
+            setTimeout(() => {
+                particle.remove();
+            }, 2000);
+        }
+    }
+
+    shakeCard(cardIndex) {
+        const playerHand = document.getElementById('player-hand');
+        const cards = playerHand.children;
+        if (cards[cardIndex]) {
+            cards[cardIndex].style.animation = 'shake 0.5s ease-in-out';
+            setTimeout(() => {
+                cards[cardIndex].style.animation = '';
+            }, 500);
+        }
+    }
+
+    startGame() {
+        this.gameActive = true;
+        this.currentPlayer = 'player';
+        this.gameDirection = 1;
+        this.drawCount = 0;
+        this.mustDraw = false;
+        this.selectedColor = null;
+        this.playerCalledUno = false;
+        this.botCalledUno = false;
+        
+        this.createDeck();
+        this.dealCards();
+        
+        document.getElementById('welcome-screen').style.display = 'none';
+        document.getElementById('game-over-screen').style.display = 'none';
+        document.getElementById('game').style.display = 'flex';
+        
+        this.showMessage('Game started! Your turn!', 'success');
+    }
+
+    initializeEventListeners() {
+        document.getElementById('start-game').addEventListener('click', () => this.startGame());
+        document.getElementById('draw-card').addEventListener('click', () => this.drawCard());
+        document.getElementById('call-uno').addEventListener('click', () => this.callUno());
+        document.getElementById('play-again').addEventListener('click', () => this.startGame());
+        
+        // Wild color selector
+        document.querySelectorAll('.color-option').forEach(button => {
+            button.addEventListener('click', (e) => {
+                this.selectWildColor(e.target.dataset.color);
+            });
+        });
+    }
+}
+
+// Initialize the game
+const game = new UnoGame();
