@@ -1,0 +1,104 @@
+/* styles.css */
+
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Montserrat:wght@700&display=swap');
+
+body {
+    background-color: #000; /* Black background */
+    color: #fff; /* White text */
+    font-family: 'Roboto', sans-serif; /* Custom font for body */
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    height: 100vh; /* Full height */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Center content vertically */
+}
+
+h1, h2 {
+    font-family: 'Montserrat', sans-serif; /* Custom font for headings */
+    color: #ffcc00; /* Bright yellow for headings */
+    text-shadow: 0 0 20px rgba(255, 204, 0, 0.8); /* Strong glowing effect */
+    margin: 10px 0; /* Spacing around headings */
+}
+
+.card-image {
+    width: 80px; /* Adjust the width as needed */
+    height: 120px; /* Adjust the height as needed */
+    margin: 5px;
+    border-radius: 10px;
+    transition: transform 0.3s, box-shadow 0.3s; /* Smooth transition for hover effects */
+    box-shadow: 0 0 15px rgba(255, 204, 0, 0.7); /* Glow effect */
+}
+
+.card-image:hover {
+    transform: scale(1.1); /* Slightly larger on hover */
+    box-shadow: 0 0 25px rgba(255, 204, 0, 1); /* Stronger glow on hover */
+}
+
+#game {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 15px; /* Rounded corners */
+    background: #000; /* Set game area background to black */
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+}
+
+#player-hand, #bot-hand {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
+}
+
+.button {
+    background-color: #ffcc00; /* Bright yellow button */
+    color: #000; /* Black text */
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 18px; /* Larger font size */
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s; /* Smooth transition */
+    box-shadow: 0 0 10px rgba(255, 204, 0, 0.5); /* Glow effect */
+}
+
+.button:hover {
+    background-color: #ffd700; /* Lighter yellow on hover */
+    transform: scale(1.05); /* Slightly larger on hover */
+    box-shadow: 0 0 20px rgba(255, 204, 0, 1); /* Stronger glow on hover */
+}
+
+.message {
+    margin: 20px;
+    font-size: 20px; /* Larger font size for messages */
+    color: #ffcc00; /* Bright yellow for messages */
+    text-shadow: 0 0 20px rgba(255, 204, 0, 0.8); /* Glowing effect */
+    animation: pulse 1.5s infinite; /* Pulsing effect */
+}
+
+/* Pulsing animation for messages */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+    .card-image {
+        width: 60px; /* Smaller cards on mobile */
+        height: 90px;
+    }
+
+    .button {
+        font-size: 16px; /* Smaller button text on mobile */
+    }
+
+    .message {
+        font-size: 18px; /* Smaller message text on mobile */
+    }
+}

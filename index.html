@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uno Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="welcome-screen">
+        <h1>Welcome to Uno!</h1>
+        <p>Try to be the first player to get rid of all your cards. Play cards that match the current card's color or number. Special cards can change the game!</p>
+        <button class="button" id="start-game">Start Game</button>
+    </div>
+
+    <div id="game" style="display: none;">
+        <h1>Uno Game</h1>
+        <div id="current-card" class="card"></div>
+        <h2>Your Hand</h2>
+        <div id="player-hand"></div>
+        <h2>Bot's Hand</h2>
+        <div id="bot-hand"></div>
+        <button class="button" id="draw-card">Draw Card</button>
+        <div id="message" class="message"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
