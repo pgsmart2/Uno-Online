@@ -285,9 +285,6 @@ class UnoGame {
         
         this.updateUI();
         
-        // Check for UNO penalty
-        this.checkUnoCall();
-        
         if (this.currentPlayer === 'bot' && this.gameActive) {
             setTimeout(() => this.botTurn(), 1500);
         }
@@ -553,3 +550,4 @@ class UnoGame {
 
 // Initialize the game
 const game = new UnoGame();
+
